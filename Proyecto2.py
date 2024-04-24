@@ -3,6 +3,18 @@ from tkinter import messagebox, PhotoImage
 from PIL import Image, ImageTk
 
 def guardar_jugador(nombre_entry, nickname_entry, ventana_registro):
+    """
+    Guarda un nuevo jugador en el archivo "jugadores.txt" si no hay campos vacíos ni nombres/nicknames repetidos.
+
+    Parameters:
+        nombre_entry (tk.Entry): Campo de entrada para el nombre del jugador.
+        nickname_entry (tk.Entry): Campo de entrada para el nickname del jugador.
+        ventana_registro (tk.Toplevel): Ventana de registro de jugadores.
+
+    Returns:
+        None
+    """
+    
     nombre = nombre_entry.get()
     nickname = nickname_entry.get()
 
@@ -29,6 +41,10 @@ def guardar_jugador(nombre_entry, nickname_entry, ventana_registro):
         nickname_entry.delete(0, tk.END)
 
 def abrir_ventana_registro():
+    """
+    Abre una ventana para el registro de nuevos jugadores, solicitando nombre y nickname.
+    """
+
     ventana_registro = tk.Toplevel()
     ventana_registro.title("Registro de Jugadores")
     ventana_registro.geometry("600x400")
@@ -49,6 +65,10 @@ def abrir_ventana_registro():
     boton_guardar.pack(pady=20)
 
 def abrir_ventana_juego():
+    """
+    Abre una ventana para la configuración del juego, donde se seleccionan los jugadores y se definen las dimensiones del tablero.
+    """
+
     ventana_juego = tk.Toplevel()
     ventana_juego.title("Configuración del Juego")
     ventana_juego.geometry("600x400")
@@ -65,16 +85,16 @@ def abrir_ventana_juego():
     label_jugador1.pack(pady=(20, 5))
 
     jugador1_var = tk.StringVar(ventana_juego)
-    jugador1_var.set("Elegir jugador")
-    jugador1_menu = tk.OptionMenu(ventana_juego, jugador1_var, *jugadores)
+    jugador1_var.set(jugadores[0] if jugadores else "Elegir jugador")  # Establecer un valor predeterminado
+    jugador1_menu = tk.OptionMenu(ventana_juego, jugador1_var, *(jugadores if jugadores else ["Elegir jugador"]))
     jugador1_menu.pack()
 
     label_jugador2 = tk.Label(ventana_juego, text="Seleccionar Jugador 2:")
     label_jugador2.pack(pady=(20, 5))
 
     jugador2_var = tk.StringVar(ventana_juego)
-    jugador2_var.set("Elegir jugador")
-    jugador2_menu = tk.OptionMenu(ventana_juego, jugador2_var, *jugadores)
+    jugador2_var.set(jugadores[0] if jugadores else "Elegir jugador")  # Establecer un valor predeterminado
+    jugador2_menu = tk.OptionMenu(ventana_juego, jugador2_var, *(jugadores if jugadores else ["Elegir jugador"]))
     jugador2_menu.pack()
 
     # Entrada para dimensiones del tablero
@@ -83,16 +103,36 @@ def abrir_ventana_juego():
     entrada_filas = tk.Entry(ventana_juego)
     entrada_filas.pack()
 
-    label_columnas = tk.Label(ventana_juego, text="Columnas (mínimo 20):")
+    label_columnas = tk.Label(ventana_juego, text="Columnas (mínimo 20 y par):")
     label_columnas.pack(pady=(10, 5))
     entrada_columnas = tk.Entry(ventana_juego)
     entrada_columnas.pack()
 
     # Botón para continuar al juego
-    boton_continuar = tk.Button(ventana_juego, text="Continuar", command=lambda: abrir_ventana_juego2(jugador1_var.get(), jugador2_var.get(), entrada_filas.get(), entrada_columnas.get()))
+    def continuar():
+        columnas = entrada_columnas.get()
+        try:
+            columnas = int(columnas)
+            assert columnas >= 20 and columnas % 2 == 0  # Verificar si es mayor o igual a 20 y par
+            abrir_ventana_juego2(jugador1_var.get(), jugador2_var.get(), entrada_filas.get(), columnas)
+        except (ValueError, AssertionError):
+            messagebox.showerror("Error", "Ingrese un número válido de columnas (mínimo 20 y par)")
+
+    boton_continuar = tk.Button(ventana_juego, text="Continuar", command=continuar)
     boton_continuar.pack(pady=20)
 
+
 def abrir_ventana_juego2(jugador1, jugador2, filas, columnas):
+    """
+    Abre una ventana de juego donde se colocan los barcos para cada jugador.
+
+    Parameters:
+        jugador1 (str): Nombre del primer jugador.
+        jugador2 (str): Nombre del segundo jugador.
+        filas (str): Número de filas del tablero.
+        columnas (str): Número de columnas del tablero.
+    """
+    
     ventana_juego2 = tk.Toplevel()
     ventana_juego2.title(f"Juego Batalla Naval - {jugador1} vs {jugador2}")
 
@@ -132,13 +172,34 @@ def abrir_ventana_juego2(jugador1, jugador2, filas, columnas):
     }
 
     def obtener_barco_actual(jugador):
+        """
+        Obtiene el tipo de barco actual que el jugador puede colocar.
+
+        Parameters:
+            jugador (str): Nombre del jugador.
+
+        Returns:
+            str or None: Tipo de barco actual o None si no hay barcos disponibles.
+        """
+
+
         for tipo_barco, cantidad in estado_juego["barcos"][jugador].items():
             if cantidad > 0:
                 return tipo_barco
         return None
 
     def colocar_barco(fila, columna):
-        
+        """
+        Coloca un barco en la posición especificada del tablero.
+
+        Parameters:
+            fila (int): Índice de fila.
+            columna (int): Índice de columna.
+
+        Returns:
+            None
+        """
+    
         jugador_actual = estado_juego["turno_jugador"]
         barco_actual = obtener_barco_actual(jugador_actual)
         if barco_actual is None:
@@ -157,15 +218,28 @@ def abrir_ventana_juego2(jugador1, jugador2, filas, columnas):
             botones_tablero[fila][columna].image = imagenes_barcos["Destructor"]
         elif barco_actual == "Crucero":
             if columna + 1 < columnas:
-                botones_tablero[fila][columna].config(image=imagenes_barcos["CruceroProa"])
-                botones_tablero[fila][columna + 1].config(image=imagenes_barcos["CruceroPopa"])
+                # Si es el jugador 1, coloca el crucero mirando hacia la derecha
+                if jugador_actual == jugador1:
+                    botones_tablero[fila][columna].config(image=imagenes_barcos["CruceroProa"])
+                    botones_tablero[fila][columna + 1].config(image=imagenes_barcos["CruceroPopa"])
+                # Si es el jugador 2, coloca el crucero mirando hacia la izquierda
+                else:
+                    botones_tablero[fila][columna].config(image=imagenes_barcos["CruceroPopa"])
+                    botones_tablero[fila][columna + 1].config(image=imagenes_barcos["CruceroProa"])
                 botones_tablero[fila][columna].image = imagenes_barcos["CruceroProa"]
                 botones_tablero[fila][columna + 1].image = imagenes_barcos["CruceroPopa"]
         elif barco_actual == "Acorazado":
             if columna + 2 < columnas:
-                botones_tablero[fila][columna].config(image=imagenes_barcos["AcorazadoProa"])
-                botones_tablero[fila][columna + 1].config(image=imagenes_barcos["AcorazadoMedio"])
-                botones_tablero[fila][columna + 2].config(image=imagenes_barcos["AcorazadoPopa"])
+                # Si es el jugador 1, coloca el acorazado mirando hacia la derecha
+                if jugador_actual == jugador1:
+                    botones_tablero[fila][columna].config(image=imagenes_barcos["AcorazadoProa"])
+                    botones_tablero[fila][columna + 1].config(image=imagenes_barcos["AcorazadoMedio"])
+                    botones_tablero[fila][columna + 2].config(image=imagenes_barcos["AcorazadoPopa"])
+                # Si es el jugador 2, coloca el acorazado mirando hacia la izquierda
+                else:
+                    botones_tablero[fila][columna].config(image=imagenes_barcos["AcorazadoPopa"])
+                    botones_tablero[fila][columna + 1].config(image=imagenes_barcos["AcorazadoMedio"])
+                    botones_tablero[fila][columna + 2].config(image=imagenes_barcos["AcorazadoProa"])
                 botones_tablero[fila][columna].image = imagenes_barcos["AcorazadoProa"]
                 botones_tablero[fila][columna + 1].image = imagenes_barcos["AcorazadoMedio"]
                 botones_tablero[fila][columna + 2].image = imagenes_barcos["AcorazadoPopa"]
@@ -207,6 +281,10 @@ def abrir_ventana_juego2(jugador1, jugador2, filas, columnas):
         frame_tablero.columnconfigure(j, weight=1)
 
 def abrir_ventana_reporte():
+    """
+    Abre una ventana para mostrar el reporte de la partida.
+    """
+
     ventana_reporte = tk.Toplevel()
     ventana_reporte.title("Reporte de Partida")
     ventana_reporte.geometry("600x400")
